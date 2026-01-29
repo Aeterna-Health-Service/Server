@@ -1,4 +1,5 @@
-# Spring Boot 앱용 Dockerfile
+# Runtime-only Spring Boot Dockerfile
+# 빌드(./gradlew build)를 CI 또는 호스트에서 먼저 수행하고, 생성된 JAR을 이미지에 복사합니다.
 FROM eclipse-temurin:17-jdk AS build
 
 # 작업 디렉토리 설정
@@ -36,4 +37,4 @@ COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
 
 # 애플리케이션 실행
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
