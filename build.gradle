@@ -1,0 +1,50 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.10'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'dgu.triple'
+version = '0.0.1-SNAPSHOT'
+description = 'Project for the 1st IoT Platform Utilization Developer Challenge'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+    /** Spring Boot starters **/
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-web-services'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    /** Lombok (compile-time annotation processing) **/
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    /** MySQL JDBC driver **/
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    /** Development tools **/
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    /** Testing dependencies **/
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+
+    /** Swagger for API documentation **/
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+
