@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+!build/libs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# 테스트
+.gradle-test-kit/
+
+# 로그
+*.log
+
+# 환경 변수 파일 (런타임에 주입)
+Secret/application-local.yml
+Secret/application.yml
+
+# Git
+.git/
+.gitignore
+
+# 기타
+.DS_Store
+*.md
+!README.md
+
