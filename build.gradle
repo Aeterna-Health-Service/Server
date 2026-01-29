@@ -18,9 +18,8 @@ repositories {
 }
 
 tasks.register('copyPrivate', Copy) {
-    from('IoT-Secret') {
+    from('Secret') {
         include '*.yml'
-        include '*.p8'
     }
     into 'src/main/resources'
 }
