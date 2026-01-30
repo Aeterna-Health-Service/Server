@@ -147,6 +147,17 @@ jobs:
             docker stop aeterna-springboot || true
             docker rm aeterna-springboot || true
             
+            # 환경 변수 파일 확인 (민감 정보 제외)
+            echo "환경 변수 파일 확인 중..."
+            if [ -f /home/ec2-user/aeterna-health/springboot.env ]; then
+              echo "✅ springboot.env 파일 존재"
+              echo "환경 변수 키 목록 (값은 마스킹):"
+              grep -E "^[A-Z_]+=" /home/ec2-user/aeterna-health/springboot.env | sed 's/=.*/=***/' || echo "환경 변수 없음"
+            else
+              echo "❌ springboot.env 파일이 없습니다!"
+              exit 1
+            fi
+            
             # 새 컨테이너 시작
             echo "새 컨테이너 시작..."
             CONTAINER_ID=$(docker run -d --name aeterna-springboot \
@@ -231,7 +242,11 @@ jobs:
             echo "=== Health Check 최종 응답 ==="
             curl -v --max-time 5 http://localhost:8080/api/health 2>&1 || echo "연결 실패"
             echo "=== 환경 변수 확인 (민감 정보 제외) ==="
-            docker exec aeterna-springboot env 2>/dev/null | grep -E "SPRING|DATABASE|DB|AWS" | sed 's/=.*/=***/' || echo "컨테이너 실행 중이 아니어서 환경 변수 확인 불가"
+            docker exec aeterna-springboot env 2>/dev/null | grep -E "SPRING|DATABASE|DB|AWS|S3" | sed 's/=.*/=***/' || echo "컨테이너 실행 중이 아니어서 환경 변수 확인 불가"
+            echo "=== 필수 환경 변수 존재 여부 확인 ==="
+            docker exec aeterna-springboot sh -c 'echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:+설정됨}"' 2>/dev/null || echo "컨테이너 실행 중이 아님"
+            docker exec aeterna-springboot sh -c 'echo "S3_BUCKET_NAME: ${S3_BUCKET_NAME:+설정됨}"' 2>/dev/null || echo "컨테이너 실행 중이 아님"
+            docker exec aeterna-springboot sh -c 'echo "AWS_REGION: ${AWS_REGION:+설정됨}"' 2>/dev/null || echo "컨테이너 실행 중이 아님"
             echo "=== 롤백 시작 ==="
             docker stop aeterna-springboot || true
             docker rm aeterna-springboot || true
