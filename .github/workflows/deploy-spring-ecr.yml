@@ -124,9 +124,18 @@ jobs:
             echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin ${{ env.ECR_REPOSITORY }} || true
             unset ECR_PASSWORD
             
-            # 이전 이미지 백업
+            # 이전 이미지 백업 (실행 중인 컨테이너의 이미지 확인)
             echo "이전 이미지 백업..."
-            docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REPOSITORY }}:previous || true
+            if docker ps -a --filter "name=aeterna-springboot" --format "{{.Image}}" | grep -q .; then
+              OLD_IMAGE=$(docker ps -a --filter "name=aeterna-springboot" --format "{{.Image}}" | head -1)
+              echo "현재 실행 중인 이미지: $OLD_IMAGE"
+              if [ ! -z "$OLD_IMAGE" ] && [ "$OLD_IMAGE" != "${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" ]; then
+                docker tag "$OLD_IMAGE" ${{ env.ECR_REPOSITORY }}:previous || true
+                echo "이전 이미지 백업 완료: $OLD_IMAGE -> previous"
+              fi
+            fi
+            # latest 태그도 백업 시도
+            docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REPOSITORY }}:previous 2>/dev/null || true
             
             # 새 이미지 다운로드
             echo "새 이미지 다운로드 중..."
@@ -140,52 +149,91 @@ jobs:
             
             # 새 컨테이너 시작
             echo "새 컨테이너 시작..."
-            docker run -d --name aeterna-springboot \
+            CONTAINER_ID=$(docker run -d --name aeterna-springboot \
               --restart unless-stopped \
               -p 8080:8080 \
               --env-file /home/ec2-user/aeterna-health/springboot.env \
               -e SPRING_PROFILES_ACTIVE=prod \
-              ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+              ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }})
+            echo "컨테이너 ID: $CONTAINER_ID"
             
-            # Health Check 대기
-            echo "Health Check 대기 중..."
-            sleep 15
+            # 컨테이너 상태 확인
+            echo "컨테이너 상태 확인..."
+            docker ps --filter "name=aeterna-springboot" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            
+            # Health Check 대기 (Spring Boot 시작 시간 확보)
+            echo "Health Check 대기 중... (Spring Boot 시작 시간: 30초)"
+            sleep 30
             
             # Health Check 실행
             echo "Health Check 실행 중..."
-            HEALTH_CHECK_MAX_RETRIES=30
-            HEALTH_CHECK_RETRY_INTERVAL=2
+            HEALTH_CHECK_MAX_RETRIES=40
+            HEALTH_CHECK_RETRY_INTERVAL=3
             
             for i in $(seq 1 $HEALTH_CHECK_MAX_RETRIES); do
-              # Spring Boot Actuator health endpoint 또는 기본 health endpoint 시도
-              if curl -f http://localhost:8080/api/health > /dev/null 2>&1 || \
-                 curl -f http://localhost:8080/actuator/health > /dev/null 2>&1 || \
-                 curl -f http://localhost:8080/ > /dev/null 2>&1; then
+              # 컨테이너 상태 확인
+              CONTAINER_STATUS=$(docker ps --filter "name=aeterna-springboot" --format "{{.Status}}" || echo "not running")
+              
+              # Health Check 시도 (에러 메시지도 확인)
+              HTTP_CODE=$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
                 echo "✅ Health Check 성공 (시도 $i/$HEALTH_CHECK_MAX_RETRIES)"
+                echo "응답 내용:"
+                cat /tmp/health_response.txt
                 echo "=== 배포 완료 ==="
+                rm -f /tmp/health_response.txt
                 exit 0
               fi
-              echo "Health Check 시도 $i/$HEALTH_CHECK_MAX_RETRIES..."
+              
+              # 중간에 로그 확인 (5번째, 15번째, 25번째 시도 시)
+              if [ $i -eq 5 ] || [ $i -eq 15 ] || [ $i -eq 25 ]; then
+                echo "--- 컨테이너 로그 (최근 20줄) ---"
+                docker logs --tail 20 aeterna-springboot || true
+                echo "--- 컨테이너 상태 ---"
+                docker ps -a --filter "name=aeterna-springboot" || true
+                echo "--- Health Check 응답 (HTTP $HTTP_CODE) ---"
+                cat /tmp/health_response.txt 2>/dev/null || echo "응답 없음"
+                echo "--- 포트 확인 ---"
+                netstat -tlnp | grep 8080 || ss -tlnp | grep 8080 || echo "포트 8080 사용 중이 아님"
+              fi
+              
+              echo "Health Check 시도 $i/$HEALTH_CHECK_MAX_RETRIES... (HTTP $HTTP_CODE, 컨테이너: $CONTAINER_STATUS)"
               sleep $HEALTH_CHECK_RETRY_INTERVAL
             done
             
-            # Health Check 실패 시 롤백
-            echo "❌ Health Check 실패 - 롤백 시작..."
+            # Health Check 실패 시 상세 로그 확인 후 롤백
+            echo "❌ Health Check 실패 - 상세 진단 시작..."
+            echo "=== 컨테이너 최종 상태 ==="
+            docker ps -a --filter "name=aeterna-springboot" || true
+            echo "=== 컨테이너 로그 (전체) ==="
+            docker logs aeterna-springboot || true
+            echo "=== 포트 상태 ==="
+            netstat -tlnp | grep 8080 || ss -tlnp | grep 8080 || echo "포트 8080 사용 중이 아님"
+            echo "=== Health Check 최종 응답 ==="
+            curl -v http://localhost:8080/api/health || true
+            echo "=== 롤백 시작 ==="
             docker stop aeterna-springboot || true
             docker rm aeterna-springboot || true
             
             # 이전 이미지로 롤백
             if docker images | grep -q "${{ env.ECR_REPOSITORY }}:previous"; then
               echo "이전 버전으로 롤백 중..."
-              docker run -d --name aeterna-springboot \
+              ROLLBACK_CONTAINER_ID=$(docker run -d --name aeterna-springboot \
                 --restart unless-stopped \
                 -p 8080:8080 \
                 --env-file /home/ec2-user/aeterna-health/springboot.env \
                 -e SPRING_PROFILES_ACTIVE=prod \
-                ${{ env.ECR_REPOSITORY }}:previous
+                ${{ env.ECR_REPOSITORY }}:previous)
+              echo "롤백 컨테이너 ID: $ROLLBACK_CONTAINER_ID"
               echo "⚠️ 이전 버전으로 롤백 완료"
+              sleep 10
+              echo "롤백 후 Health Check..."
+              curl -s http://localhost:8080/api/health || echo "롤백 버전도 Health Check 실패"
             else
               echo "⚠️ 롤백할 이전 이미지가 없습니다"
+              echo "사용 가능한 이미지 목록:"
+              docker images | grep "${{ env.ECR_REPOSITORY }}" || echo "이미지 없음"
             fi
             
             exit 1
