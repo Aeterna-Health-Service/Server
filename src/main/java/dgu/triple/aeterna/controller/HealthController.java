@@ -18,6 +18,7 @@ public class HealthController {
         healthData.put("status", "UP");
         healthData.put("service", "Aeterna Spring Boot");
         healthData.put("timestamp", System.currentTimeMillis());
+        System.out.println("Health Check Success");
         return ResponseDto.ok(healthData);
     }
 }
