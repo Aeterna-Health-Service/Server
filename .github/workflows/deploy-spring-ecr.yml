@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -50,6 +53,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -163,8 +169,8 @@ jobs:
             
             # Health Check 실행
             echo "Health Check 실행 중..."
-            HEALTH_CHECK_MAX_RETRIES=40
-            HEALTH_CHECK_RETRY_INTERVAL=3
+            HEALTH_CHECK_MAX_RETRIES=5
+            HEALTH_CHECK_RETRY_INTERVAL=5
             
             for i in $(seq 1 $HEALTH_CHECK_MAX_RETRIES); do
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
@@ -175,9 +181,7 @@ jobs:
                 exit 0
               fi
               
-              if [ $((i % 10)) -eq 0 ]; then
-                echo "Health Check 시도 $i/$HEALTH_CHECK_MAX_RETRIES... (HTTP $HTTP_CODE)"
-              fi
+              echo "Health Check 시도 $i/$HEALTH_CHECK_MAX_RETRIES... (HTTP $HTTP_CODE)"
               sleep $HEALTH_CHECK_RETRY_INTERVAL
             done
             
