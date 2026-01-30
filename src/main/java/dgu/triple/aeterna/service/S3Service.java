@@ -21,10 +21,10 @@ public class S3Service {
 
     private final S3Client s3Client;
 
-    @Value("${aws.s3.bucket-name}")
+    @Value("${aws.s3.bucket-name:${S3_BUCKET_NAME}}")
     private String bucketName;
 
-    @Value("${aws.s3.region}")
+    @Value("${aws.s3.region:${AWS_REGION:ap-northeast-2}}")
     private String region;
 
     /**
