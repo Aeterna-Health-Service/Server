@@ -27,11 +27,9 @@ jobs:
           cache: 'gradle'
 
       - name: Grant execute permission for gradlew
-        working-directory: ./Server
         run: chmod +x gradlew
 
       - name: Run tests
-        working-directory: ./Server
         run: |
           set -e
           echo "테스트 실행 중..."
@@ -42,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: Server/build/test-results/
+          path: build/test-results/
 
   build-and-push:
     name: 빌드 및 배포
@@ -85,7 +83,6 @@ jobs:
           unset ECR_PASSWORD
 
       - name: Build Docker image (Spring)
-        working-directory: ./Server
         run: |
           set -e
           echo "Docker 이미지 빌드 시작..."
