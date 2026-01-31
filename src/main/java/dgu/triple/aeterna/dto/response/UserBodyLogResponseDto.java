@@ -9,7 +9,7 @@ public record UserBodyLogResponseDto(
         Long id,
         Long userId,
         LocalDateTime measuredAt,
-        Integer weightKg,
+        Integer weight,
         Integer bodyFatPct,
         Integer muscleMassKg,
         LocalDateTime createdAt
@@ -19,7 +19,7 @@ public record UserBodyLogResponseDto(
                 e.getId(),
                 e.getUser().getId(),
                 e.getMeasuredAt(),
-                e.getWeightKg(),
+                e.getWeight(),
                 e.getBodyFatPct(),
                 e.getMuscleMassKg(),
                 e.getCreatedAt()

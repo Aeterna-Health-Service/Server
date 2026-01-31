@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 public record UserBodyLogRequestDto(
         LocalDateTime measuredAt,
-        Integer weightKg,
+        Integer weight,
         Integer bodyFatPct,
         Integer muscleMassKg
 ) {
@@ -16,7 +16,7 @@ public record UserBodyLogRequestDto(
         return UserBodyLog.builder()
                 .user(user)
                 .measuredAt(measuredAt)
-                .weightKg(weightKg)
+                .weight(weight)
                 .bodyFatPct(bodyFatPct)
                 .muscleMassKg(muscleMassKg)
                 .build();
