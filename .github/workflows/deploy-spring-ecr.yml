@@ -2,9 +2,9 @@ name: CI/CD - Spring Boot (ECR -> EC2)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ release ]
   pull_request:
-    branches: [ main ]
+    branches: [ release]
   workflow_dispatch:  # 수동 실행 가능
 
 env:
