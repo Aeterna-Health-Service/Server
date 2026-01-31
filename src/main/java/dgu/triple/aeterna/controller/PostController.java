@@ -3,6 +3,7 @@ package dgu.triple.aeterna.controller;
 import dgu.triple.aeterna.domain.Post.BoardType;
 import dgu.triple.aeterna.dto.ResponseDto;
 import dgu.triple.aeterna.dto.request.PostRequestDto;
+import dgu.triple.aeterna.service.PostLikeService;
 import dgu.triple.aeterna.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class PostController {
 
     private final PostService postService;
+    private final PostLikeService postLikeService;
 
     @PostMapping
     public ResponseDto<?> createPost(
@@ -22,11 +24,12 @@ public class PostController {
         return ResponseDto.ok(postService.createPost(boardType, postRequestDto));
     }
 
-    @GetMapping("/{postId}")
+    @GetMapping("/{postId}/{userId}")
     public ResponseDto<?> getPost(
-            @PathVariable Long postId
+            @PathVariable Long postId,
+            @PathVariable Long userId
     ) {
-        return ResponseDto.ok(postService.getPost(postId));
+        return ResponseDto.ok(postService.getPost(postId,  userId));
     }
 
     @GetMapping
@@ -52,6 +55,22 @@ public class PostController {
             @PathVariable Long userId
     ) {
         return ResponseDto.ok(postService.deletePost(postId, userId));
+    }
+
+    @PostMapping("/{postId}/like/{userId}")
+    public ResponseDto<?> doPostLike(
+            @PathVariable Long postId,
+            @PathVariable Long userId
+    ) {
+        return ResponseDto.ok(postLikeService.doPostLike(postId,  userId));
+    }
+
+    @DeleteMapping("/{postId}/like/{userId}")
+    public ResponseDto<?> undoPostLike(
+            @PathVariable Long postId,
+            @PathVariable Long userId
+    ) {
+        return ResponseDto.ok(postLikeService.undoPostLike(postId,  userId));
     }
 }
 

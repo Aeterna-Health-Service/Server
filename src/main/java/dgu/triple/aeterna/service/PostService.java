@@ -1,12 +1,14 @@
 package dgu.triple.aeterna.service;
 
 import dgu.triple.aeterna.domain.Post;
+import dgu.triple.aeterna.domain.PostLike;
 import dgu.triple.aeterna.domain.User;
 import dgu.triple.aeterna.dto.request.PostRequestDto;
 import dgu.triple.aeterna.dto.response.PageResponseDto;
 import dgu.triple.aeterna.dto.response.PostResponseDto;
 import dgu.triple.aeterna.exception.CommonException;
 import dgu.triple.aeterna.exception.ErrorCode;
+import dgu.triple.aeterna.repository.PostLikeRepository;
 import dgu.triple.aeterna.repository.PostRepository;
 import dgu.triple.aeterna.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
 
     public Long createPost(Post.BoardType boardType, PostRequestDto postRequestDto) {
         User user = userRepository.findById(postRequestDto.userId()).orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_USER));
@@ -34,11 +37,13 @@ public class PostService {
         return newPost.getId();
     }
 
-    public PostResponseDto getPost(Long postId) {
+    public PostResponseDto getPost(Long postId, Long userId) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_RESOURCE));
+        User user = userRepository.findById(userId).orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_USER));
+        PostLike postLike = postLikeRepository.findByUserAndPost(user,  post);
         post.increaseViewCount();
 
-        return PostResponseDto.fromEntity(post);
+        return PostResponseDto.fromEntity(post, postLike != null);
     }
 
     public PageResponseDto<PostResponseDto> getPostList(Post.BoardType boardType, Integer pageNum, Integer size) {

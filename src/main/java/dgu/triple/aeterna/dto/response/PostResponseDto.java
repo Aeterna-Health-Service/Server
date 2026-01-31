@@ -14,8 +14,25 @@ public record PostResponseDto(
         Integer viewCount,
         Integer likeCount,
         Integer commentCount,
+        Boolean isLiked,
         LocalDateTime createdAt
 ) {
+    public static PostResponseDto fromEntity(Post e, Boolean isLiked) {
+        return new PostResponseDto(
+                e.getId(),
+                e.getUser().getId(),
+                e.getUser().getName(),
+                e.getPostType(),
+                e.getTitle(),
+                e.getContent(),
+                e.getViewCount(),
+                e.getLikeCount(),
+                e.getCommentCount(),
+                isLiked,
+                e.getCreatedAt()
+        );
+    }
+
     public static PostResponseDto fromEntity(Post e) {
         return new PostResponseDto(
                 e.getId(),
@@ -27,6 +44,7 @@ public record PostResponseDto(
                 e.getViewCount(),
                 e.getLikeCount(),
                 e.getCommentCount(),
+                true,
                 e.getCreatedAt()
         );
     }
