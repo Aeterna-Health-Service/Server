@@ -2,6 +2,8 @@ package dgu.triple.aeterna.controller;
 
 import dgu.triple.aeterna.dto.ResponseDto;
 import dgu.triple.aeterna.dto.request.CommentRequestDto;
+import dgu.triple.aeterna.dto.response.CommentResponseDto;
+import dgu.triple.aeterna.dto.response.PageResponseDto;
 import dgu.triple.aeterna.service.CommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,7 +29,7 @@ public class CommentController {
     )
     @ApiResponse(responseCode = "200", description = "댓글 작성 성공")
     @PostMapping
-    public ResponseDto<?> createComment(
+    public ResponseDto<Long> createComment(
             @Parameter(description = "게시글 ID", example = "10")
             @PathVariable Long postId,
 
@@ -45,7 +47,7 @@ public class CommentController {
     )
     @ApiResponse(responseCode = "200", description = "댓글 목록 조회 성공")
     @GetMapping
-    public ResponseDto<?> getComments(
+    public ResponseDto<PageResponseDto<CommentResponseDto>> getComments(
             @Parameter(description = "게시글 ID", example = "10")
             @PathVariable Long postId,
 
@@ -77,7 +79,7 @@ public class CommentController {
     )
     @ApiResponse(responseCode = "200", description = "댓글 삭제 성공")
     @DeleteMapping("/{commentId}/{userId}")
-    public ResponseDto<?> deleteComment(
+    public ResponseDto<Boolean> deleteComment(
             @Parameter(description = "댓글 ID", example = "100")
             @PathVariable Long commentId,
 
