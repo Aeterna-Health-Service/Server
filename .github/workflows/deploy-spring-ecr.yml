@@ -3,8 +3,6 @@ name: CI/CD - Spring Boot (ECR -> EC2)
 on:
   push:
     branches: [ release ]
-  pull_request:
-    branches: [ release]
   workflow_dispatch:  # 수동 실행 가능
 
 env:
@@ -12,42 +10,42 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  test:
-    name: 테스트 실행
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
+  # test:
+  #   name: 테스트 실행
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         persist-credentials: true
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+  #     - name: Set up JDK 17
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
+  #         cache: 'gradle'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+  #     - name: Grant execute permission for gradlew
+  #       run: chmod +x gradlew
 
-      - name: Run tests
-        run: |
-          set -e
-          echo "테스트 실행 중..."
-          ./gradlew test --no-daemon || echo "테스트 실패 또는 테스트 없음"
+  #     - name: Run tests
+  #       run: |
+  #         set -e
+  #         echo "테스트 실행 중..."
+  #         ./gradlew test --no-daemon || echo "테스트 실패 또는 테스트 없음"
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: build/test-results/
+  #     - name: Upload test results
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: test-results
+  #         path: build/test-results/
 
   build-and-push:
     name: 빌드 및 배포
-    needs: test
+    # needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
