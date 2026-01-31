@@ -44,7 +44,7 @@ public class User {
     @Column(name = "age")
     private Integer age;
 
-    @Column(name = "height_cm", precision = 5, scale = 2)
+    @Column(name = "height_cm")
     private Integer height;
 
     @Column(name = "weight")

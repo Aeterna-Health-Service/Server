@@ -28,13 +28,13 @@ public class UserBodyLog {
     @Column(name = "measured_at", nullable = false)
     private LocalDateTime measuredAt;
 
-    @Column(name = "weight_kg", nullable = false, precision = 5, scale = 2)
-    private Integer weightKg;
+    @Column(name = "weight_kg", nullable = false)
+    private Integer weight;
 
-    @Column(name = "body_fat_pct", precision = 5, scale = 2)
+    @Column(name = "body_fat_pct")
     private Integer bodyFatPct;
 
-    @Column(name = "muscle_mass_kg", precision = 6, scale = 2)
+    @Column(name = "muscle_mass_kg")
     private Integer muscleMassKg;
 
     @CreationTimestamp
@@ -45,13 +45,13 @@ public class UserBodyLog {
     public UserBodyLog(
             User user,
             LocalDateTime measuredAt,
-            Integer weightKg,
+            Integer weight,
             Integer bodyFatPct,
             Integer muscleMassKg
     ) {
         this.user = user;
         this.measuredAt = measuredAt;
-        this.weightKg = weightKg;
+        this.weight = weight;
         this.bodyFatPct = bodyFatPct;
         this.muscleMassKg = muscleMassKg;
     }

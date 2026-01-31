@@ -33,16 +33,16 @@ public class MealLog {
     @Column(name = "name")
     private String name;
 
-    @Column(name = "total_kcal", nullable = false, precision = 10, scale = 2)
+    @Column(name = "total_kcal", nullable = false)
     private Integer totalKcal;
 
-    @Column(name = "total_carb_g", nullable = false, precision = 10, scale = 2)
+    @Column(name = "total_carb_g")
     private Integer totalCarbG;
 
-    @Column(name = "total_protein_g", nullable = false, precision = 10, scale = 2)
+    @Column(name = "total_protein_g", nullable = false)
     private Integer totalProteinG;
 
-    @Column(name = "total_fat_g", nullable = false, precision = 10, scale = 2)
+    @Column(name = "total_fat_g", nullable = false)
     private Integer totalFatG;
 
     @Column(name = "eaten_at", nullable = false, updatable = false)

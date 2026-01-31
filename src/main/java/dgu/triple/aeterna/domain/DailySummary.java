@@ -25,29 +25,29 @@ public class DailySummary {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "intake_kcal", nullable = false, precision = 10, scale = 2)
+    @Column(name = "intake_kcal", nullable = false)
     private Integer intakeKcal;
 
-    @Column(name = "intake_carb", nullable = false, precision = 10, scale = 2)
+    @Column(name = "intake_carb", nullable = false)
     private Integer intakeCarb;
 
-    @Column(name = "intake_protein", nullable = false, precision = 10, scale = 2)
+    @Column(name = "intake_protein", nullable = false)
     private Integer intakeProtein;
 
-    @Column(name = "intake_fat", nullable = false, precision = 10, scale = 2)
+    @Column(name = "intake_fat", nullable = false)
     private Integer intakeFat;
 
-    @Column(name = "burned_kcal", nullable = false, precision = 10, scale = 2)
+    @Column(name = "burned_kcal", nullable = false)
     private Integer burnedKcal;
 
     @Column(name = "steps", nullable = false)
     private Integer steps;
 
-    @Column(name = "weight_kg", precision = 5, scale = 2)
-    private Integer weightKg;
+    @Column(name = "weight_kg")
+    private Integer weight;
 
     @Column(name = "water_ml", nullable = false)
-    private Integer waterMl;
+    private Integer water;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -61,7 +61,7 @@ public class DailySummary {
         this.intakeFat = 0;
         this.burnedKcal = 0;
         this.steps = 0;
-        this.weightKg = 0;
-        this.waterMl = 0;
+        this.weight = 0;
+        this.water = 0;
     }
 }
