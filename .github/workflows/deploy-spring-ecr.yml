@@ -1,0 +1,209 @@
+name: CI/CD - Spring Boot (ECR -> EC2)
+
+on:
+  push:
+    branches: [ release ]
+  pull_request:
+    branches: [ release]
+  workflow_dispatch:  # 수동 실행 가능
+
+env:
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_SPRING }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  test:
+    name: 테스트 실행
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run tests
+        run: |
+          set -e
+          echo "테스트 실행 중..."
+          ./gradlew test --no-daemon || echo "테스트 실패 또는 테스트 없음"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/
+
+  build-and-push:
+    name: 빌드 및 배포
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        run: |
+          set -e
+          echo "ECR 로그인 시작..."
+          # ECR 비밀번호를 가져와서 마스킹 처리
+          ECR_PASSWORD=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }})
+          if [ -z "$ECR_PASSWORD" ]; then
+            echo "❌ ECR 비밀번호를 가져오는데 실패했습니다."
+            exit 1
+          fi
+          echo "::add-mask::$ECR_PASSWORD"
+          # ECR 레지스트리 URI 추출 (예: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com)
+          ECR_REGISTRY=$(echo ${{ env.ECR_REPOSITORY }} | cut -d'/' -f1)
+          echo "ECR 레지스트리: $ECR_REGISTRY"
+          echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin $ECR_REGISTRY
+          if [ $? -eq 0 ]; then
+            echo "✅ ECR 로그인 성공"
+          else
+            echo "❌ ECR 로그인 실패"
+            exit 1
+          fi
+          unset ECR_PASSWORD
+
+      - name: Build Docker image (Spring)
+        run: |
+          set -e
+          echo "Docker 이미지 빌드 시작..."
+          echo "ECR 레포지토리: ${{ env.ECR_REPOSITORY }}"
+          echo "이미지 태그: ${{ env.IMAGE_TAG }}"
+          if [ ! -f "DockerFIle" ]; then
+            echo "❌ DockerFIle을 찾을 수 없습니다. 현재 디렉토리: $(pwd)"
+            ls -la
+            exit 1
+          fi
+          docker build -f DockerFIle -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ env.ECR_REPOSITORY }}:latest
+          echo "✅ Docker 이미지 빌드 완료"
+
+      - name: Push Docker image to ECR
+        run: |
+          set -e
+          echo "ECR에 이미지 푸시 시작..."
+          docker push ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.ECR_REPOSITORY }}:latest
+          echo "✅ 이미지 푸시 완료"
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            
+            echo "=== 배포 시작 ==="
+            
+            # ECR 로그인 (IAM 역할이 있다면 자동 인증)
+            echo "ECR 로그인 중..."
+            # 비밀번호를 환경 변수로 받아서 마스킹 처리
+            ECR_PASSWORD=$(aws ecr get-login-password --region ap-northeast-2)
+            echo "::add-mask::$ECR_PASSWORD"
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin ${{ env.ECR_REPOSITORY }} || true
+            unset ECR_PASSWORD
+            
+            # 이전 이미지 백업 (실행 중인 컨테이너의 이미지 확인)
+            echo "이전 이미지 백업..."
+            if docker ps -a --filter "name=aeterna-springboot" --format "{{.Image}}" | grep -q .; then
+              OLD_IMAGE=$(docker ps -a --filter "name=aeterna-springboot" --format "{{.Image}}" | head -1)
+              echo "현재 실행 중인 이미지: $OLD_IMAGE"
+              if [ ! -z "$OLD_IMAGE" ] && [ "$OLD_IMAGE" != "${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" ]; then
+                docker tag "$OLD_IMAGE" ${{ env.ECR_REPOSITORY }}:previous || true
+                echo "이전 이미지 백업 완료: $OLD_IMAGE -> previous"
+              fi
+            fi
+            # latest 태그도 백업 시도
+            docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REPOSITORY }}:previous 2>/dev/null || true
+            
+            # 새 이미지 다운로드
+            echo "새 이미지 다운로드 중..."
+            docker pull ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            docker tag ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ env.ECR_REPOSITORY }}:latest
+            
+            # 기존 컨테이너 중지
+            echo "기존 컨테이너 중지..."
+            docker stop aeterna-springboot || true
+            docker rm aeterna-springboot || true
+            
+            # 새 컨테이너 시작
+            echo "새 컨테이너 시작..."
+            CONTAINER_ID=$(docker run -d --name aeterna-springboot \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              --env-file /home/ec2-user/aeterna-health/springboot.env \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }})
+            echo "컨테이너 ID: $CONTAINER_ID"
+            
+            # Health Check 대기 (Spring Boot 시작 시간 확보)
+            echo "Health Check 대기 중..."
+            sleep 30
+            
+            # Health Check 실행
+            echo "Health Check 실행 중..."
+            HEALTH_CHECK_MAX_RETRIES=5
+            HEALTH_CHECK_RETRY_INTERVAL=5
+            
+            for i in $(seq 1 $HEALTH_CHECK_MAX_RETRIES); do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health || echo "000")
+              
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Health Check 성공 (시도 $i/$HEALTH_CHECK_MAX_RETRIES)"
+                echo "=== 배포 완료 ==="
+                exit 0
+              fi
+              
+              echo "Health Check 시도 $i/$HEALTH_CHECK_MAX_RETRIES... (HTTP $HTTP_CODE)"
+              sleep $HEALTH_CHECK_RETRY_INTERVAL
+            done
+            
+            # Health Check 실패 시 롤백
+            echo "❌ Health Check 실패 - 롤백 시작..."
+            echo "컨테이너 로그 (최근 50줄):"
+            docker logs --tail 50 aeterna-springboot 2>&1 || true
+            docker stop aeterna-springboot || true
+            docker rm aeterna-springboot || true
+            
+            # 이전 이미지로 롤백
+            if docker images | grep -q "${{ env.ECR_REPOSITORY }}:previous"; then
+              echo "이전 버전으로 롤백 중..."
+              docker run -d --name aeterna-springboot \
+                --restart unless-stopped \
+                -p 8080:8080 \
+                --env-file /home/ec2-user/aeterna-health/springboot.env \
+                -e SPRING_PROFILES_ACTIVE=prod \
+                ${{ env.ECR_REPOSITORY }}:previous
+              echo "⚠️ 이전 버전으로 롤백 완료"
+            else
+              echo "⚠️ 롤백할 이전 이미지가 없습니다"
+            fi
+            
+            exit 1

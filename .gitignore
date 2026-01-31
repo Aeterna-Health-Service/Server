@@ -36,4 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
+# Ignore YAML files except GitHub Actions workflows
 **/*.yml
+!.github/workflows/*.yml
