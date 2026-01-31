@@ -22,7 +22,11 @@ public class DailySummaryService {
 
     public DailySummaryResponseDto getDailySummary(Long userId, LocalDate date) {
         User user = userRepository.findById(userId).orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_USER));
-        DailySummary dailySummary = dailySummaryRepository.findDailySummaryByCreatedAtAndUser(date, user).orElseThrow(() -> new CommonException(ErrorCode.SERVER_ERROR));
+        DailySummary dailySummary = dailySummaryRepository.findDailySummaryByCreatedAtAndUser(date, user)
+                        .orElseGet(() -> {
+                            DailySummary newDailySummary = new DailySummary(user);
+                            return dailySummaryRepository.save(newDailySummary);
+                        });
 
         return DailySummaryResponseDto.fromEntity(dailySummary);
     }
