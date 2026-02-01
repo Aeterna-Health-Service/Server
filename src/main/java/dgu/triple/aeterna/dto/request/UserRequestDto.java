@@ -88,24 +88,4 @@ public record UserRequestDto(
         @Schema(description = "하루 걸음 수 목표", example = "10000")
         Integer stepsTarget
 ) {
-    public User toEntity() {
-        return User.builder()
-                .name(name)
-                .nickname(nickname)
-                .phone(phone)
-                .email(email)
-                .gender(gender)
-                .age(age)
-                .height(height)
-                .activityLevel(activityLevel)
-                .goalType(goalType)
-                .weight(weight)
-                .targetWeight(targetWeight)
-                .dietType(dietType)
-                .goalKcal(goalKcal)
-                .waterTargetMl(waterTargetMl)
-                .exerciseKcalTarget(exerciseKcalTarget)
-                .stepsTarget(stepsTarget)
-                .build();
-    }
 }
