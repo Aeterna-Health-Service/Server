@@ -1,0 +1,3 @@
+[submodule "Secret"]
+	path = Secret
+	url = https://github.com/Aeterna-Health-Service/Secret.git
