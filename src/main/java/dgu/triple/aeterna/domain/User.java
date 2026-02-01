@@ -2,7 +2,6 @@ package dgu.triple.aeterna.domain;
 
 import dgu.triple.aeterna.dto.request.UserRequestDto;
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,10 +21,19 @@ public class User {
     @Column(name = "id")
     private Long id;
 
+    // ===== Social =====
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", nullable = false, length = 20)
+    private Provider provider;
+
+    @Column(name = "social_token", nullable = false, length = 1000)
+    private String socialToken;
+
+    // ===== Profile (nullable 허용) =====
     @Column(name = "name", length = 50)
     private String name;
 
-    @Column(name = "nickname", length = 30, nullable = false)
+    @Column(name = "nickname", length = 30)
     private String nickname;
 
     @Column(name = "phone", length = 20)
@@ -38,7 +46,7 @@ public class User {
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender", nullable = false)
+    @Column(name = "gender")
     private EGender gender;
 
     @Column(name = "age")
@@ -51,18 +59,18 @@ public class User {
     private Double weight;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "activity_level", nullable = false)
+    @Column(name = "activity_level")
     private ActivityLevel activityLevel;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "goal_type", nullable = false)
+    @Column(name = "goal_type")
     private GoalType goalType;
 
     @Column(name = "target_weight")
     private Double targetWeight;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "diet_type", nullable = false)
+    @Column(name = "diet_type")
     private DietType dietType;
 
     @Column(name = "bmr_kcal")
@@ -75,16 +83,16 @@ public class User {
     @Column(name = "status", nullable = false)
     private UserStatus status;
 
-    @Column(name = "goal_kcal", nullable = false)
+    @Column(name = "goal_kcal")
     private Integer goalKcal;
 
-    @Column(name = "target_carb_g", nullable = false)
+    @Column(name = "target_carb_g")
     private Integer targetCarb;
 
-    @Column(name = "target_protein_g", nullable = false)
+    @Column(name = "target_protein_g")
     private Integer targetProtein;
 
-    @Column(name = "target_fat_g", nullable = false)
+    @Column(name = "target_fat_g")
     private Integer targetFatG;
 
     @Column(name = "water_target_ml")
@@ -100,67 +108,26 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Builder
-    public User(
-            String name,
-            String nickname,
-            String phone,
-            String email,
-            String profileImageUrl,
-            EGender gender,
-            Integer age,
-            Integer height,
-            Double weight,
-            ActivityLevel activityLevel,
-            GoalType goalType,
-            Double targetWeight,
-            DietType dietType,
-            Double bmr,
-            Integer tdeeKcal,
-            UserStatus status,
-            Integer goalKcal,
-            Integer targetCarb,
-            Integer targetProtein,
-            Integer targetFatG,
-            Integer waterTargetMl,
-            Integer exerciseKcalTarget,
-            Integer stepsTarget
-    ) {
-        this.name = name;
-        this.nickname = nickname;
-        this.phone = phone;
-        this.email = email;
-        this.profileImageUrl = profileImageUrl;
-        this.gender = gender;
-        this.age = age;
-        this.height = height;
-        this.weight = weight;
-        this.activityLevel = activityLevel;
-        this.goalType = goalType;
-        this.targetWeight =  targetWeight;
-        this.dietType = dietType;
-        this.bmr = bmr;
-        this.tdeeKcal = tdeeKcal;
-        this.status = status;
-        this.goalKcal = goalKcal;
-        this.targetCarb = targetCarb;
-        this.targetProtein = targetProtein;
-        this.targetFatG = targetFatG;
-        this.waterTargetMl = waterTargetMl;
-        this.exerciseKcalTarget = exerciseKcalTarget;
-        this.stepsTarget = stepsTarget;
+    // ===== social register factory =====
+    public static User register(Provider provider, String socialToken) {
+        User user = new User();
+        user.provider = provider;
+        user.socialToken = socialToken;
+        user.status = UserStatus.ACTIVE;
+        return user;
     }
 
+    // 기존 로직 유지
     public void updateBmr(Double bmr) {
         this.bmr = bmr;
     }
 
-    // User.java (도메인)
     public void updateUser(UserRequestDto dto) {
-
+        if (dto.name() != null) this.name = dto.name();
         if (dto.nickname() != null) this.nickname = dto.nickname();
         if (dto.phone() != null) this.phone = dto.phone();
         if (dto.email() != null) this.email = dto.email();
+        if (dto.gender() != null) this.gender = dto.gender();
         if (dto.age() != null) this.age = dto.age();
         if (dto.height() != null) this.height = dto.height();
         if (dto.activityLevel() != null) this.activityLevel = dto.activityLevel();
@@ -174,7 +141,8 @@ public class User {
         if (dto.stepsTarget() != null) this.stepsTarget = dto.stepsTarget();
     }
 
-    public enum EGender { MALE, FEMALE}
+    public enum Provider { GOOGLE, APPLE }
+    public enum EGender { MALE, FEMALE }
     public enum ActivityLevel { VERY_LOW, LOW, NORMAL, HIGH }
     public enum GoalType { DIET, BULK, MAINTAIN }
     public enum DietType { BALANCE, HIGH_PROTEIN, KETO, VEGAN }
